@@ -1,0 +1,21 @@
+{
+  "name": "causable-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Causable - Verifiable Runtime for Autonomous AI",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:cloud": "cd packages/causable-cloud && deno run --allow-net --allow-env --allow-read api/index.ts",
+    "dev:extension": "cd packages/vscode-causable && npm run watch"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  }
+}

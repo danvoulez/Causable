@@ -1,0 +1,10 @@
+{
+  "name": "@causable/cloud",
+  "version": "1.0.0",
+  "description": "Causable Cloud Backend (Deno)",
+  "type": "module",
+  "scripts": {
+    "dev": "deno run --allow-net --allow-env --allow-read --watch api/index.ts",
+    "start": "deno run --allow-net --allow-env --allow-read api/index.ts"
+  }
+}
