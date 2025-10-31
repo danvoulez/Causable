@@ -1,7 +1,7 @@
 // Spans REST endpoint - GET and POST
 // Connects to PostgreSQL ledger.universal_registry table
 
-import { dbPool } from "../lib/db.ts";
+import { dbPool } from "../../lib/db.ts";
 
 interface Span {
   id: string;

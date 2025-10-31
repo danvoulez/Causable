@@ -126,7 +126,7 @@ function testVisibilityEnum(): boolean {
 // Run all tests
 function runTests(): void {
   console.log('\n🧪 Running API Contract Tests\n');
-  console.log('=' .repeat(50));
+  console.log('='.repeat(50));
   
   const tests = [
     testSpanTypeRequiredFields,
@@ -152,7 +152,7 @@ function runTests(): void {
     }
   }
   
-  console.log('=' .repeat(50));
+  console.log('='.repeat(50));
   console.log(`\n📊 Results: ${passed} passed, ${failed} failed\n`);
   
   if (failed > 0) {

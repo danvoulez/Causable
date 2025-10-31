@@ -1,7 +1,7 @@
 // SSE Stream endpoint for real-time updates
 // Uses PostgreSQL LISTEN/NOTIFY for real-time span updates
 
-import { createClient } from "../lib/db.ts";
+import { createClient } from "../../lib/db.ts";
 
 function corsHeaders(): Headers {
   return new Headers({

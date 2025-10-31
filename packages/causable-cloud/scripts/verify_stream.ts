@@ -92,7 +92,7 @@ try {
         // Keep-alive comment
         const keepAliveMsg = line.substring(2);
         if (keepAliveMsg === "keep-alive") {
-          process.stdout.write(".");
+          Deno.stdout.writeSync(new TextEncoder().encode("."));
         }
       }
     }
