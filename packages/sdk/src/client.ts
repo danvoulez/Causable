@@ -1,4 +1,6 @@
 import { Span, SpanFilter } from './types';
+import { SpanSchema, SpanFilterSchema } from './validation';
+import { z } from 'zod';
 
 /**
  * Client for interacting with the Causable Cloud API
@@ -6,10 +8,12 @@ import { Span, SpanFilter } from './types';
 export class CausableClient {
   private baseUrl: string;
   private apiKey?: string;
+  private validateResponses: boolean;
 
-  constructor(baseUrl: string, apiKey?: string) {
+  constructor(baseUrl: string, apiKey?: string, options?: { validateResponses?: boolean }) {
     this.baseUrl = baseUrl.replace(/\/$/, ''); // Remove trailing slash
     this.apiKey = apiKey;
+    this.validateResponses = options?.validateResponses ?? true;
   }
 
   /**
@@ -35,9 +39,63 @@ export class CausableClient {
   }
 
   /**
+   * Validate and parse a span response
+   */
+  private validateSpan(data: unknown): Span {
+    if (!this.validateResponses) {
+      return data as Span;
+    }
+    
+    try {
+      return SpanSchema.parse(data) as Span;
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        const issues = error.issues || [];
+        console.error('Span validation failed:', issues);
+        throw new Error(`Invalid span data received from API: ${issues.map((e: any) => e.message).join(', ')}`);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Validate and parse an array of spans
+   */
+  private validateSpans(data: unknown): Span[] {
+    if (!this.validateResponses) {
+      return data as Span[];
+    }
+    
+    if (!Array.isArray(data)) {
+      throw new Error('Expected array of spans, got ' + typeof data);
+    }
+    
+    return data.map((span, index) => {
+      try {
+        return this.validateSpan(span);
+      } catch (error) {
+        throw new Error(`Validation failed for span at index ${index}: ${error instanceof Error ? error.message : error}`);
+      }
+    });
+  }
+
+  /**
    * Fetch spans from the REST API
    */
   async fetchSpans(filter?: SpanFilter): Promise<Span[]> {
+    // Validate filter
+    if (filter && this.validateResponses) {
+      try {
+        SpanFilterSchema.parse(filter);
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          const issues = error.issues || [];
+          throw new Error(`Invalid filter: ${issues.map((e: any) => e.message).join(', ')}`);
+        }
+        throw error;
+      }
+    }
+    
     const params = new URLSearchParams();
     
     if (filter?.entity_type) params.append('entity_type', filter.entity_type);
@@ -52,10 +110,12 @@ export class CausableClient {
     });
     
     if (!response.ok) {
-      throw new Error(`Failed to fetch spans: ${response.statusText}`);
+      const errorText = await response.text();
+      throw new Error(`Failed to fetch spans (${response.status}): ${errorText}`);
     }
     
-    return response.json() as Promise<Span[]>;
+    const data = await response.json();
+    return this.validateSpans(data);
   }
 
   /**
@@ -69,10 +129,12 @@ export class CausableClient {
     });
     
     if (!response.ok) {
-      throw new Error(`Failed to create span: ${response.statusText}`);
+      const errorText = await response.text();
+      throw new Error(`Failed to create span (${response.status}): ${errorText}`);
     }
     
-    return response.json() as Promise<Span>;
+    const data = await response.json();
+    return this.validateSpan(data);
   }
 
   /**

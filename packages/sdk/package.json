@@ -9,7 +9,9 @@
     "watch": "tsc --watch",
     "test": "tsx test/contract.test.ts"
   },
-  "dependencies": {},
+  "dependencies": {
+    "zod": "^4.1.12"
+  },
   "devDependencies": {
     "typescript": "^5.0.0"
   }
