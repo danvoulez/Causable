@@ -11,12 +11,13 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
   constructor(
     private readonly _extensionUri: vscode.Uri,
-    private readonly _apiKeyService: ApiKeyService
+    private readonly _apiKeyService: ApiKeyService,
+    private readonly _statusBarItem: vscode.StatusBarItem
   ) {}
 
   public resolveWebviewView(
     webviewView: vscode.WebviewView,
-    context: vscode.WebviewViewResolveContext,
+    _context: vscode.WebviewViewResolveContext,
     _token: vscode.CancellationToken
   ) {
     this._view = webviewView;
@@ -31,7 +32,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     // Handle messages from the webview
     webviewView.webview.onDidReceiveMessage(async (message) => {
       switch (message.type) {
-        case 'getApiConfig':
+        case 'getApiConfig': {
           // Send API configuration to the webview
           const apiKey = await this._apiKeyService.getApiKey();
           const apiUrl = await this._apiKeyService.getApiUrl();
@@ -42,8 +43,46 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             apiUrl: apiUrl,
           });
           break;
+        }
+        
+        case 'copyToClipboard': {
+          // Copy text to clipboard
+          if (message.text) {
+            await vscode.env.clipboard.writeText(message.text);
+            vscode.window.showInformationMessage('Copied to clipboard!');
+          }
+          break;
+        }
+        
+        case 'updateConnectionState': {
+          // Update status bar based on connection state
+          this._updateStatusBar(message.state);
+          break;
+        }
       }
     });
+  }
+
+  private _updateStatusBar(state: string) {
+    switch (state) {
+      case 'connected':
+        this._statusBarItem.text = '$(circle-filled) Causable';
+        this._statusBarItem.tooltip = 'Causable: Live';
+        break;
+      case 'connecting':
+        this._statusBarItem.text = '$(sync~spin) Causable';
+        this._statusBarItem.tooltip = 'Causable: Connecting...';
+        break;
+      case 'error':
+        this._statusBarItem.text = '$(error) Causable';
+        this._statusBarItem.tooltip = 'Causable: Error';
+        break;
+      case 'disconnected':
+      default:
+        this._statusBarItem.text = '$(circle-outline) Causable';
+        this._statusBarItem.tooltip = 'Causable: Disconnected';
+        break;
+    }
   }
 
   public refresh() {

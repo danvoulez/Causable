@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Span, ConnectionState } from '@causable/sdk';
+import '../webview/types'; // Import global type declarations
 
 interface UseTimelineStreamResult {
   connectionState: ConnectionState;
@@ -27,6 +28,15 @@ export function useTimelineStream(): UseTimelineStreamResult {
   const reconnectTimeoutRef = useRef<number | null>(null);
   const reconnectAttemptsRef = useRef<number>(0);
   const vscodeApiRef = useRef(acquireVsCodeApi());
+
+  // Update extension status bar when connection state changes
+  useEffect(() => {
+    const vscode = vscodeApiRef.current;
+    vscode.postMessage({
+      type: 'updateConnectionState',
+      state: connectionState,
+    });
+  }, [connectionState]);
 
   // Request API configuration from the extension host
   useEffect(() => {
@@ -159,8 +169,7 @@ export function useTimelineStream(): UseTimelineStreamResult {
         reconnectTimeoutRef.current = null;
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [apiConfig]);
+  }, [apiConfig]); // connect is stable and depends only on apiConfig
 
   const reconnect = useCallback(() => {
     console.log('Manual reconnection requested');
@@ -175,10 +184,3 @@ export function useTimelineStream(): UseTimelineStreamResult {
     reconnect,
   };
 }
-
-// Type declaration for VS Code API
-declare function acquireVsCodeApi(): {
-  postMessage: (message: any) => void;
-  setState: (state: any) => void;
-  getState: () => any;
-};
