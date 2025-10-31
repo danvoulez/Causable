@@ -13,3 +13,4 @@ out/
 .tmp/
 coverage/
 .nyc_output/
+*.tsbuildinfo
