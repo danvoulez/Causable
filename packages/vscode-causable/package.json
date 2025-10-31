@@ -1,0 +1,71 @@
+{
+  "name": "causable",
+  "displayName": "Causable Ledger Explorer",
+  "description": "Real-time, verifiable runtime for autonomous AI, right in your editor.",
+  "version": "1.0.0",
+  "publisher": "causable",
+  "icon": "media/icon.png",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onView:causable.timelineView"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "causable-sidebar",
+          "title": "Causable",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "causable-sidebar": [
+        {
+          "type": "webview",
+          "id": "causable.timelineView",
+          "name": "Ledger Timeline"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "causable.setApiKey",
+        "title": "Causable: Set API Key"
+      },
+      {
+        "command": "causable.setApiUrl",
+        "title": "Causable: Set API URL"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "lint": "eslint src --ext ts",
+    "package": "vsce package"
+  },
+  "dependencies": {
+    "@causable/sdk": "workspace:*",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@types/vscode": "^1.80.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "@vscode/vsce": "^2.19.0",
+    "eslint": "^8.40.0",
+    "typescript": "^5.0.0"
+  }
+}
