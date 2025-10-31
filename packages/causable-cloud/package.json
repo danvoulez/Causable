@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "deno run --allow-net --allow-env --allow-read --watch api/index.ts",
-    "start": "deno run --allow-net --allow-env --allow-read api/index.ts"
+    "start": "deno run --allow-net --allow-env --allow-read api/index.ts",
+    "verify": "deno run --allow-net --allow-env scripts/verify_stream.ts"
   }
 }
