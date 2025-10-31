@@ -1,7 +1,7 @@
 // SSE Stream endpoint for real-time updates
 // Uses PostgreSQL LISTEN/NOTIFY for real-time span updates
 
-import { createClient } from "../../lib/db.ts";
+import { createDedicatedClient } from "../../lib/db.ts";
 
 function corsHeaders(): Headers {
   return new Headers({
@@ -24,7 +24,7 @@ export async function handleStream(_req: Request): Promise<Response> {
       let keepAliveInterval: number | undefined;
       
       try {
-        client = await createClient();
+        client = await createDedicatedClient();
         
         // Send initial connection event
         const connectMsg = `data: ${JSON.stringify({ type: "connected", message: "Timeline stream connected" })}\n\n`;

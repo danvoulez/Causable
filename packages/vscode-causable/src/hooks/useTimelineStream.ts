@@ -38,6 +38,17 @@ export function useTimelineStream(): UseTimelineStreamResult {
     });
   }, [connectionState]);
 
+  // Persist spans to extension storage periodically
+  useEffect(() => {
+    if (spans.length > 0) {
+      const vscode = vscodeApiRef.current;
+      vscode.postMessage({
+        type: 'persistSpans',
+        spans: spans,
+      });
+    }
+  }, [spans]);
+
   // Request API configuration from the extension host
   useEffect(() => {
     const vscode = vscodeApiRef.current;
@@ -52,6 +63,16 @@ export function useTimelineStream(): UseTimelineStreamResult {
           apiUrl: message.apiUrl,
           apiKey: message.apiKey,
         });
+      } else if (message.type === 'cachedSpans') {
+        // Load cached spans from previous session
+        console.log('Loading cached spans:', message.spans?.length || 0);
+        if (message.spans && Array.isArray(message.spans)) {
+          setSpans(message.spans);
+        }
+      } else if (message.type === 'retry') {
+        // Manual retry triggered from error dialog
+        reconnectAttemptsRef.current = 0;
+        connect();
       }
     };
     
@@ -69,7 +90,21 @@ export function useTimelineStream(): UseTimelineStreamResult {
     if (!apiConfig || !apiConfig.apiKey || !apiConfig.apiUrl) {
       console.log('Cannot connect: missing API config', apiConfig);
       setConnectionState('disconnected');
-      setError('API key or URL not configured. Please run "Causable: Set API Key" command.');
+      
+      const errorMsg = !apiConfig ? 
+        'API not configured' : 
+        !apiConfig.apiUrl ? 
+          'API URL not set. Run "Causable: Set API URL"' :
+          'API key not set. Run "Causable: Set API Key"';
+      
+      setError(errorMsg);
+      
+      // Notify extension to show error
+      const vscode = vscodeApiRef.current;
+      vscode.postMessage({
+        type: 'showError',
+        error: { message: errorMsg },
+      });
       return;
     }
 
@@ -125,7 +160,12 @@ export function useTimelineStream(): UseTimelineStreamResult {
       eventSource.onerror = (event) => {
         console.error('SSE connection error:', event);
         setConnectionState('error');
-        setError('Connection to timeline stream failed');
+        
+        const errorMessage = reconnectAttemptsRef.current === 0 ?
+          'Failed to connect to timeline stream. Check your API URL and network connection.' :
+          `Connection lost. Retrying... (attempt ${reconnectAttemptsRef.current})`;
+        
+        setError(errorMessage);
         
         // Close the connection
         if (eventSourceRef.current) {
@@ -139,6 +179,15 @@ export function useTimelineStream(): UseTimelineStreamResult {
         
         console.log(`Will attempt to reconnect in ${backoffDelay}ms (attempt ${reconnectAttemptsRef.current})...`);
         
+        // Show error to user after first few attempts
+        if (reconnectAttemptsRef.current >= 3) {
+          const vscode = vscodeApiRef.current;
+          vscode.postMessage({
+            type: 'showError',
+            error: { message: errorMessage },
+          });
+        }
+        
         reconnectTimeoutRef.current = window.setTimeout(() => {
           console.log('Attempting to reconnect...');
           connect();
@@ -147,7 +196,15 @@ export function useTimelineStream(): UseTimelineStreamResult {
     } catch (err) {
       console.error('Error creating EventSource:', err);
       setConnectionState('error');
-      setError(err instanceof Error ? err.message : 'Failed to create connection');
+      const errorMsg = err instanceof Error ? err.message : 'Failed to create connection';
+      setError(errorMsg);
+      
+      // Notify extension
+      const vscode = vscodeApiRef.current;
+      vscode.postMessage({
+        type: 'showError',
+        error: { message: errorMsg },
+      });
     }
   }, [apiConfig]);
 

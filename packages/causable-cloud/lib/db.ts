@@ -1,7 +1,8 @@
 // Database connection and query utilities for PostgreSQL
-// Uses Deno's PostgreSQL client
+// Uses Deno's PostgreSQL client with connection pooling
 
-import { Client } from "https://deno.land/x/postgres@v0.17.0/mod.ts";
+import { Pool } from "https://deno.land/x/postgres@v0.17.0/mod.ts";
+import type { Client } from "https://deno.land/x/postgres@v0.17.0/mod.ts";
 
 /**
  * Get database connection string from environment
@@ -15,51 +16,38 @@ function getDatabaseUrl(): string {
 }
 
 /**
- * Create a new database client connection
- */
-export async function createClient(): Promise<Client> {
-  const client = new Client(getDatabaseUrl());
-  await client.connect();
-  return client;
-}
-
-/**
- * Create a pooled database connection
- * For production use, this should use a proper connection pool
+ * Production-grade connection pool using deno-postgres Pool
  */
 export class DatabasePool {
-  private client: Client | null = null;
-  private connecting: Promise<Client> | null = null;
+  private pool: Pool;
+
+  constructor() {
+    const poolSize = parseInt(Deno.env.get("DB_POOL_SIZE") || "10");
+    
+    this.pool = new Pool(getDatabaseUrl(), poolSize, true);
+    
+    console.log(`✅ Database connection pool initialized with ${poolSize} connections`);
+  }
 
   async getClient(): Promise<Client> {
-    // Return existing client if available
-    if (this.client) {
-      return this.client;
-    }
-    
-    // If already connecting, wait for that connection
-    if (this.connecting) {
-      return this.connecting;
-    }
-    
-    // Start new connection
-    this.connecting = createClient();
-    try {
-      this.client = await this.connecting;
-      return this.client;
-    } finally {
-      this.connecting = null;
-    }
+    return await this.pool.connect();
   }
 
   async close(): Promise<void> {
-    if (this.client) {
-      await this.client.end();
-      this.client = null;
-    }
-    this.connecting = null;
+    await this.pool.end();
   }
 }
 
 // Singleton pool instance
 export const dbPool = new DatabasePool();
+
+/**
+ * Create a standalone client for LISTEN/NOTIFY operations
+ * These need a dedicated connection
+ */
+export async function createDedicatedClient(): Promise<Client> {
+  const { Client } = await import("https://deno.land/x/postgres@v0.17.0/mod.ts");
+  const client = new Client(getDatabaseUrl());
+  await client.connect();
+  return client;
+}

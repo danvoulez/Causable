@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { ApiKeyService } from './services/ApiKeyService';
+import { Span } from '@causable/sdk';
 
 /**
  * Provider for the Causable sidebar webview
@@ -8,11 +9,14 @@ import { ApiKeyService } from './services/ApiKeyService';
  */
 export class SidebarProvider implements vscode.WebviewViewProvider {
   private _view?: vscode.WebviewView;
+  private readonly STORAGE_KEY_SPANS = 'causable.cachedSpans';
+  private readonly STORAGE_KEY_CONNECTION = 'causable.lastConnectionState';
 
   constructor(
     private readonly _extensionUri: vscode.Uri,
     private readonly _apiKeyService: ApiKeyService,
-    private readonly _statusBarItem: vscode.StatusBarItem
+    private readonly _statusBarItem: vscode.StatusBarItem,
+    private readonly _context: vscode.ExtensionContext
   ) {}
 
   public resolveWebviewView(
@@ -42,6 +46,15 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             apiKey: apiKey || '',
             apiUrl: apiUrl,
           });
+          
+          // Send cached spans if available
+          const cachedSpans = await this._getCachedSpans();
+          if (cachedSpans && cachedSpans.length > 0) {
+            webviewView.webview.postMessage({
+              type: 'cachedSpans',
+              spans: cachedSpans,
+            });
+          }
           break;
         }
         
@@ -57,10 +70,70 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         case 'updateConnectionState': {
           // Update status bar based on connection state
           this._updateStatusBar(message.state);
+          // Persist connection state
+          await this._context.workspaceState.update(this.STORAGE_KEY_CONNECTION, message.state);
+          break;
+        }
+        
+        case 'persistSpans': {
+          // Persist spans to workspace state
+          if (message.spans) {
+            await this._cacheSpans(message.spans);
+          }
+          break;
+        }
+        
+        case 'showError': {
+          // Show error message to user
+          if (message.error) {
+            const errorMessage = this._formatErrorMessage(message.error);
+            const action = await vscode.window.showErrorMessage(
+              errorMessage,
+              'Configure API',
+              'Retry'
+            );
+            
+            if (action === 'Configure API') {
+              await vscode.commands.executeCommand('causable.setApiUrl');
+              await vscode.commands.executeCommand('causable.setApiKey');
+            } else if (action === 'Retry') {
+              webviewView.webview.postMessage({ type: 'retry' });
+            }
+          }
           break;
         }
       }
     });
+  }
+
+  private _formatErrorMessage(error: any): string {
+    if (typeof error === 'string') {
+      return `Causable Error: ${error}`;
+    }
+    
+    if (error.status === 401) {
+      return 'Causable: Invalid API key. Please update your credentials.';
+    }
+    
+    if (error.status === 429) {
+      return 'Causable: Rate limit exceeded. Please try again later.';
+    }
+    
+    if (error.message) {
+      return `Causable: ${error.message}`;
+    }
+    
+    return 'Causable: An unknown error occurred. Check the console for details.';
+  }
+
+  private async _getCachedSpans(): Promise<Span[] | undefined> {
+    return this._context.workspaceState.get<Span[]>(this.STORAGE_KEY_SPANS);
+  }
+
+  private async _cacheSpans(spans: Span[]): Promise<void> {
+    // Only cache the most recent 100 spans to avoid excessive storage usage
+    const spansToCache = spans.slice(0, 100);
+    await this._context.workspaceState.update(this.STORAGE_KEY_SPANS, spansToCache);
   }
 
   private _updateStatusBar(state: string) {
@@ -88,6 +161,12 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
   public refresh() {
     if (this._view) {
       this._view.webview.html = this._getHtmlForWebview(this._view.webview);
+    }
+  }
+
+  public sendMessage(message: any): void {
+    if (this._view) {
+      this._view.webview.postMessage(message);
     }
   }
 

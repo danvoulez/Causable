@@ -1,8 +1,9 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Span } from '@causable/sdk';
 import { SpanRow } from './SpanRow';
 import { FilterBar } from './FilterBar';
 import { DetailPane } from './DetailPane';
+import '../webview/types';
 
 interface TimelineViewProps {
   spans: Span[];
@@ -18,9 +19,11 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
   connectionState 
 }) => {
   const [selectedSpan, setSelectedSpan] = useState<Span | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState<number>(-1);
   const [traceIdFilter, setTraceIdFilter] = useState('');
   const [entityTypeFilter, setEntityTypeFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const timelineListRef = useRef<HTMLDivElement>(null);
 
   // Filter spans based on current filter values
   const filteredSpans = useMemo(() => {
@@ -54,6 +57,68 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
     });
   }, [spans, traceIdFilter, entityTypeFilter, statusFilter]);
 
+  // Listen for messages from extension
+  useEffect(() => {
+    const vscode = acquireVsCodeApi();
+    
+    const handleMessage = (event: MessageEvent) => {
+      const message = event.data;
+      
+      if (message.type === 'filterByTraceId' && message.traceId) {
+        setTraceIdFilter(message.traceId);
+      } else if (message.type === 'clearFilters') {
+        handleClearFilters();
+      }
+    };
+    
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Only handle keyboard if detail pane is not open
+      if (selectedSpan) {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          setSelectedSpan(null);
+          setSelectedIndex(-1);
+        }
+        return;
+      }
+
+      if (filteredSpans.length === 0) return;
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        const newIndex = Math.min(selectedIndex + 1, filteredSpans.length - 1);
+        setSelectedIndex(newIndex);
+        scrollToIndex(newIndex);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        const newIndex = Math.max(selectedIndex - 1, 0);
+        setSelectedIndex(newIndex);
+        scrollToIndex(newIndex);
+      } else if (e.key === 'Enter' && selectedIndex >= 0) {
+        e.preventDefault();
+        setSelectedSpan(filteredSpans[selectedIndex]);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedIndex, filteredSpans, selectedSpan]);
+
+  const scrollToIndex = (index: number) => {
+    if (timelineListRef.current) {
+      const element = timelineListRef.current.children[index] as HTMLElement;
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+  };
+
   const handleClearFilters = () => {
     setTraceIdFilter('');
     setEntityTypeFilter('');
@@ -62,6 +127,11 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
 
   const handleFilterByTraceId = (traceId: string) => {
     setTraceIdFilter(traceId);
+  };
+
+  const handleSpanClick = (span: Span, index: number) => {
+    setSelectedSpan(span);
+    setSelectedIndex(index);
   };
 
   return (
@@ -78,6 +148,9 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
 
       <div className="timeline-header">
         <h3>Timeline ({filteredSpans.length} spans)</h3>
+        <div className="keyboard-hint">
+          <small>Use ↑↓ to navigate, Enter to view, Esc to close</small>
+        </div>
       </div>
 
       {filteredSpans.length === 0 && connectionState === 'connected' && (
@@ -101,13 +174,13 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
       )}
 
       {filteredSpans.length > 0 && (
-        <div className="timeline-list">
+        <div className="timeline-list" ref={timelineListRef}>
           {filteredSpans.map((span, index) => (
             <SpanRow
               key={`${span.id}-${index}`}
               span={span}
-              isSelected={selectedSpan?.id === span.id}
-              onClick={() => setSelectedSpan(span)}
+              isSelected={selectedSpan?.id === span.id || selectedIndex === index}
+              onClick={() => handleSpanClick(span, index)}
             />
           ))}
         </div>
@@ -116,7 +189,10 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
       {selectedSpan && (
         <DetailPane
           span={selectedSpan}
-          onClose={() => setSelectedSpan(null)}
+          onClose={() => {
+            setSelectedSpan(null);
+            setSelectedIndex(-1);
+          }}
           onFilterByTraceId={handleFilterByTraceId}
         />
       )}
@@ -131,12 +207,21 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
 
         .timeline-header {
           padding: 0 0 12px 0;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
         }
 
         .timeline-header h3 {
           margin: 0;
           font-size: 14px;
           font-weight: 600;
+          color: var(--vscode-descriptionForeground);
+        }
+
+        .keyboard-hint {
+          opacity: 0.6;
+          font-size: 10px;
           color: var(--vscode-descriptionForeground);
         }
 

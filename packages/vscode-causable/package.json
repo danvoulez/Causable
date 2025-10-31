@@ -42,6 +42,14 @@
       {
         "command": "causable.setApiUrl",
         "title": "Causable: Set API URL"
+      },
+      {
+        "command": "causable.searchTraceId",
+        "title": "Causable: Search Trace ID..."
+      },
+      {
+        "command": "causable.clearFilters",
+        "title": "Causable: Clear Timeline Filters"
       }
     ]
   },
@@ -57,7 +65,8 @@
   "dependencies": {
     "@causable/sdk": "workspace:*",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "react-json-view": "^1.21.3"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

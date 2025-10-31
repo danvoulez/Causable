@@ -1,5 +1,6 @@
 import React from 'react';
 import { Span } from '@causable/sdk';
+import ReactJson from 'react-json-view';
 import '../webview/types'; // Import global type declarations
 
 interface DetailPaneProps {
@@ -53,11 +54,6 @@ export const DetailPane: React.FC<DetailPaneProps> = ({
     }
   };
 
-  // Format JSON with syntax highlighting
-  const formatJson = (obj: any): string => {
-    return JSON.stringify(obj, null, 2);
-  };
-
   return (
     <div className="detail-pane">
       <div className="detail-pane-header">
@@ -91,9 +87,23 @@ export const DetailPane: React.FC<DetailPaneProps> = ({
       </div>
 
       <div className="detail-pane-content">
-        <pre className="json-viewer">
-          <code>{formatJson(span)}</code>
-        </pre>
+        <ReactJson
+          src={span}
+          theme="monokai"
+          collapsed={2}
+          collapseStringsAfterLength={50}
+          displayDataTypes={false}
+          displayObjectSize={true}
+          enableClipboard={true}
+          name="span"
+          style={{
+            backgroundColor: 'var(--vscode-editor-background)',
+            fontSize: '12px',
+            fontFamily: 'var(--vscode-editor-font-family)',
+            padding: '16px',
+            borderRadius: '4px',
+          }}
+        />
       </div>
 
       <style>{`
@@ -111,6 +121,16 @@ export const DetailPane: React.FC<DetailPaneProps> = ({
           flex-direction: column;
           z-index: 100;
           box-shadow: -2px 0 8px rgba(0, 0, 0, 0.2);
+          animation: slideInRight 0.2s ease-out;
+        }
+
+        @keyframes slideInRight {
+          from {
+            transform: translateX(100%);
+          }
+          to {
+            transform: translateX(0);
+          }
         }
 
         .detail-pane-header {
@@ -138,6 +158,7 @@ export const DetailPane: React.FC<DetailPaneProps> = ({
           padding: 4px 8px;
           border-radius: 4px;
           line-height: 1;
+          transition: background 0.15s ease;
         }
 
         .close-btn:hover {
@@ -162,6 +183,7 @@ export const DetailPane: React.FC<DetailPaneProps> = ({
           border: none;
           border-radius: 2px;
           cursor: pointer;
+          transition: background 0.15s ease;
         }
 
         .action-btn:hover {
@@ -176,23 +198,6 @@ export const DetailPane: React.FC<DetailPaneProps> = ({
           flex: 1;
           overflow: auto;
           padding: 16px;
-        }
-
-        .json-viewer {
-          margin: 0;
-          padding: 16px;
-          background: var(--vscode-textCodeBlock-background);
-          border: 1px solid var(--vscode-panel-border);
-          border-radius: 4px;
-          overflow-x: auto;
-          font-family: var(--vscode-editor-font-family);
-          font-size: 12px;
-          line-height: 1.6;
-          color: var(--vscode-editor-foreground);
-        }
-
-        .json-viewer code {
-          font-family: inherit;
         }
 
         @media (max-width: 800px) {
