@@ -17,7 +17,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
   public resolveWebviewView(
     webviewView: vscode.WebviewView,
-    context: vscode.WebviewViewResolveContext,
+    _context: vscode.WebviewViewResolveContext,
     _token: vscode.CancellationToken
   ) {
     this._view = webviewView;
@@ -32,7 +32,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     // Handle messages from the webview
     webviewView.webview.onDidReceiveMessage(async (message) => {
       switch (message.type) {
-        case 'getApiConfig':
+        case 'getApiConfig': {
           // Send API configuration to the webview
           const apiKey = await this._apiKeyService.getApiKey();
           const apiUrl = await this._apiKeyService.getApiUrl();
@@ -43,19 +43,22 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             apiUrl: apiUrl,
           });
           break;
+        }
         
-        case 'copyToClipboard':
+        case 'copyToClipboard': {
           // Copy text to clipboard
           if (message.text) {
             await vscode.env.clipboard.writeText(message.text);
             vscode.window.showInformationMessage('Copied to clipboard!');
           }
           break;
+        }
         
-        case 'updateConnectionState':
+        case 'updateConnectionState': {
           // Update status bar based on connection state
           this._updateStatusBar(message.state);
           break;
+        }
       }
     });
   }

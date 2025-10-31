@@ -1,5 +1,6 @@
 import React from 'react';
 import { Span } from '@causable/sdk';
+import '../webview/types'; // Import global type declarations
 
 interface DetailPaneProps {
   span: Span | null;
@@ -204,11 +205,4 @@ export const DetailPane: React.FC<DetailPaneProps> = ({
       `}</style>
     </div>
   );
-};
-
-// Type declaration for VS Code API
-declare function acquireVsCodeApi(): {
-  postMessage: (message: any) => void;
-  setState: (state: any) => void;
-  getState: () => any;
 };
