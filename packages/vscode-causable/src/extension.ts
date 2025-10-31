@@ -20,7 +20,7 @@ export function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(statusBarItem);
 
   // Register sidebar provider
-  const sidebarProvider = new SidebarProvider(context.extensionUri, apiKeyService, statusBarItem);
+  const sidebarProvider = new SidebarProvider(context.extensionUri, apiKeyService, statusBarItem, context);
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(
       'causable.timelineView',
