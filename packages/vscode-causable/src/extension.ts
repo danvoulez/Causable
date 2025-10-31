@@ -64,6 +64,36 @@ export function activate(context: vscode.ExtensionContext) {
       }
     })
   );
+
+  // Register command to search by trace ID
+  context.subscriptions.push(
+    vscode.commands.registerCommand('causable.searchTraceId', async () => {
+      const traceId = await vscode.window.showInputBox({
+        prompt: 'Enter a Trace ID to filter by',
+        placeHolder: 'trace-12345-abcde',
+      });
+
+      if (traceId) {
+        // Send message to webview to apply filter
+        sidebarProvider.sendMessage({
+          type: 'filterByTraceId',
+          traceId: traceId,
+        });
+        vscode.window.showInformationMessage(`Filtering by trace ID: ${traceId}`);
+      }
+    })
+  );
+
+  // Register command to clear filters
+  context.subscriptions.push(
+    vscode.commands.registerCommand('causable.clearFilters', () => {
+      // Send message to webview to clear filters
+      sidebarProvider.sendMessage({
+        type: 'clearFilters',
+      });
+      vscode.window.showInformationMessage('Filters cleared');
+    })
+  );
 }
 
 export function deactivate() {

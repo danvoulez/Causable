@@ -35,6 +35,25 @@ export const SpanRow: React.FC<SpanRowProps> = ({ span, isSelected, onClick }) =
     }
   };
 
+  // Get color for duration bar
+  const getDurationColor = (durationMs?: number): string => {
+    if (!durationMs) return '#9e9e9e';
+    
+    if (durationMs < 100) return '#4caf50'; // green - fast
+    if (durationMs < 500) return '#2196f3'; // blue - normal
+    if (durationMs < 1000) return '#ff9800'; // orange - slow
+    return '#f44336'; // red - very slow
+  };
+
+  // Calculate duration bar width (0-100%)
+  const getDurationBarWidth = (durationMs?: number): number => {
+    if (!durationMs) return 0;
+    
+    // Logarithmic scale: 10ms = 10%, 100ms = 50%, 1000ms = 90%, 10000ms = 100%
+    const percentage = Math.min(100, (Math.log10(durationMs) / 4) * 100);
+    return percentage;
+  };
+
   // Format relative timestamp
   const getRelativeTime = (timestamp: string): string => {
     const now = Date.now();
@@ -50,6 +69,10 @@ export const SpanRow: React.FC<SpanRowProps> = ({ span, isSelected, onClick }) =
 
   const statusColor = getStatusColor(span.status);
   const relativeTime = getRelativeTime(span.at);
+  const hasError = !!span.error;
+  const hasDuration = span.duration_ms !== undefined && span.duration_ms !== null;
+  const durationColor = getDurationColor(span.duration_ms);
+  const durationBarWidth = getDurationBarWidth(span.duration_ms);
 
   return (
     <div
@@ -72,6 +95,11 @@ export const SpanRow: React.FC<SpanRowProps> = ({ span, isSelected, onClick }) =
             title={span.status || 'No status'}
           />
           <span className="entity-type-badge">{span.entity_type}</span>
+          {hasError && (
+            <span className="error-indicator" title={span.error?.message || 'Error occurred'}>
+              ⚠
+            </span>
+          )}
         </div>
         <span className="timestamp" title={new Date(span.at).toLocaleString()}>
           {relativeTime}
@@ -85,14 +113,34 @@ export const SpanRow: React.FC<SpanRowProps> = ({ span, isSelected, onClick }) =
           <span className="this"> {span.this}</span>
         </div>
         
-        {span.duration_ms !== undefined && (
-          <div className="duration">
-            <span className="duration-label">Duration:</span> {span.duration_ms}ms
+        {hasDuration && (
+          <div className="duration-container">
+            <div className="duration-bar-wrapper">
+              <div 
+                className="duration-bar" 
+                style={{ 
+                  width: `${durationBarWidth}%`,
+                  backgroundColor: durationColor
+                }}
+              />
+            </div>
+            <span className="duration-text">{span.duration_ms}ms</span>
           </div>
         )}
       </div>
 
       <style>{`
+        @keyframes slideIn {
+          from {
+            opacity: 0;
+            transform: translateY(-8px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
         .span-row {
           padding: 10px 12px;
           border: 1px solid var(--vscode-panel-border);
@@ -101,11 +149,13 @@ export const SpanRow: React.FC<SpanRowProps> = ({ span, isSelected, onClick }) =
           cursor: pointer;
           transition: all 0.15s ease;
           margin-bottom: 6px;
+          animation: slideIn 0.2s ease-out;
         }
 
         .span-row:hover {
           background: var(--vscode-list-hoverBackground);
           border-color: var(--vscode-focusBorder);
+          transform: translateX(2px);
         }
 
         .span-row.selected {
@@ -137,6 +187,12 @@ export const SpanRow: React.FC<SpanRowProps> = ({ span, isSelected, onClick }) =
           height: 8px;
           border-radius: 50%;
           flex-shrink: 0;
+          animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.7; }
         }
 
         .entity-type-badge {
@@ -148,6 +204,17 @@ export const SpanRow: React.FC<SpanRowProps> = ({ span, isSelected, onClick }) =
           background: var(--vscode-badge-background);
           padding: 2px 6px;
           border-radius: 3px;
+        }
+
+        .error-indicator {
+          font-size: 14px;
+          color: var(--vscode-errorForeground);
+          cursor: help;
+          transition: transform 0.1s ease;
+        }
+
+        .error-indicator:hover {
+          transform: scale(1.2);
         }
 
         .timestamp {
@@ -179,14 +246,33 @@ export const SpanRow: React.FC<SpanRowProps> = ({ span, isSelected, onClick }) =
           color: var(--vscode-foreground);
         }
 
-        .duration {
-          font-size: 11px;
-          color: var(--vscode-descriptionForeground);
-          margin-top: 4px;
+        .duration-container {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-top: 6px;
         }
 
-        .duration-label {
-          font-weight: 500;
+        .duration-bar-wrapper {
+          flex: 1;
+          height: 4px;
+          background: var(--vscode-panel-border);
+          border-radius: 2px;
+          overflow: hidden;
+        }
+
+        .duration-bar {
+          height: 100%;
+          transition: width 0.3s ease;
+          border-radius: 2px;
+        }
+
+        .duration-text {
+          font-size: 11px;
+          color: var(--vscode-descriptionForeground);
+          font-family: var(--vscode-editor-font-family);
+          min-width: 50px;
+          text-align: right;
         }
       `}</style>
     </div>

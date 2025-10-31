@@ -164,6 +164,12 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     }
   }
 
+  public sendMessage(message: any): void {
+    if (this._view) {
+      this._view.webview.postMessage(message);
+    }
+  }
+
   private _getHtmlForWebview(webview: vscode.Webview) {
     // Get the URI for the webview script
     const scriptUri = webview.asWebviewUri(
