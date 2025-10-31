@@ -3,8 +3,8 @@ import { ApiKeyService } from './services/ApiKeyService';
 
 /**
  * Provider for the Causable sidebar webview
- * Implements basic scaffold with "Hello, Causable" message
- * (Full SSE streaming and React app will be added in PR-103)
+ * Loads the React application and handles message passing between
+ * the extension host and the webview for API configuration
  */
 export class SidebarProvider implements vscode.WebviewViewProvider {
   private _view?: vscode.WebviewView;
@@ -27,6 +27,23 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     };
 
     webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
+
+    // Handle messages from the webview
+    webviewView.webview.onDidReceiveMessage(async (message) => {
+      switch (message.type) {
+        case 'getApiConfig':
+          // Send API configuration to the webview
+          const apiKey = await this._apiKeyService.getApiKey();
+          const apiUrl = await this._apiKeyService.getApiUrl();
+          
+          webviewView.webview.postMessage({
+            type: 'apiConfig',
+            apiKey: apiKey || '',
+            apiUrl: apiUrl,
+          });
+          break;
+      }
+    });
   }
 
   public refresh() {
@@ -36,47 +53,42 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
   }
 
   private _getHtmlForWebview(webview: vscode.Webview) {
-    // Basic HTML5 boilerplate with simple "Hello, Causable" message
-    // As per PR-102 requirements: minimal scaffold, not the full React app yet
+    // Get the URI for the webview script
+    const scriptUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(this._extensionUri, 'out', 'webview.js')
+    );
+
+    // Use a nonce to whitelist which scripts can be run
+    const nonce = getNonce();
+
     return `<!DOCTYPE html>
     <html lang="en">
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'nonce-${nonce}'; connect-src *;">
         <title>Causable Timeline</title>
         <style>
             body {
-                font-family: var(--vscode-font-family);
-                font-size: var(--vscode-font-size);
-                color: var(--vscode-foreground);
-                background-color: var(--vscode-sideBar-background);
-                padding: 20px;
                 margin: 0;
-            }
-            #root {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                height: calc(100vh - 40px);
-            }
-            .message {
-                font-size: 24px;
-                font-weight: 600;
-                color: var(--vscode-textLink-foreground);
+                padding: 0;
+                overflow-x: hidden;
             }
         </style>
     </head>
     <body>
         <div id="root"></div>
-        <script>
-            // Simple script to render "Hello, Causable" message
-            const root = document.getElementById('root');
-            const messageDiv = document.createElement('div');
-            messageDiv.className = 'message';
-            messageDiv.textContent = 'Hello, Causable';
-            root.appendChild(messageDiv);
-        </script>
+        <script nonce="${nonce}" src="${scriptUri}"></script>
     </body>
     </html>`;
   }
+}
+
+function getNonce() {
+  let text = '';
+  const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  for (let i = 0; i < 32; i++) {
+    text += possible.charAt(Math.floor(Math.random() * possible.length));
+  }
+  return text;
 }
