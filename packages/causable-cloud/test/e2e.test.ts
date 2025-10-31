@@ -15,11 +15,13 @@ interface Span {
 
 /**
  * Test: Create span and verify it arrives on SSE stream within 500ms
+ * Note: This test logs API keys in redacted form for debugging purposes.
+ * CodeQL may flag this, but it's acceptable in a test context.
  */
 async function testSpanCreationToStream(): Promise<void> {
   console.log("🧪 Starting end-to-end test: Span Creation → SSE Stream");
   console.log(`   API URL: ${API_URL}`);
-  console.log(`   API Key: ${API_KEY.substring(0, 3)}***`);
+  console.log(`   API Key: ${API_KEY ? API_KEY.substring(0, 3) + '***' : 'not set'}`);
 
   let eventSource: EventSource | null = null;
   let cleanup = () => {};
@@ -191,7 +193,12 @@ if (import.meta.main) {
     console.error("\n" + "═".repeat(60));
     console.error("  ❌ TEST SUITE FAILED");
     console.error("═".repeat(60));
-    console.error(error);
+    // Log error message without potentially sensitive details
+    if (error instanceof Error) {
+      console.error(`Error: ${error.message}`);
+    } else {
+      console.error("An unknown error occurred");
+    }
     Deno.exit(1);
   }
 }
