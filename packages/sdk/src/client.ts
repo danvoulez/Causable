@@ -22,8 +22,8 @@ export class CausableClient {
   /**
    * Get headers for authenticated requests
    */
-  private getHeaders(): HeadersInit {
-    const headers: HeadersInit = {
+  private getHeaders(): Record<string, string> {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
     
@@ -55,7 +55,7 @@ export class CausableClient {
       throw new Error(`Failed to fetch spans: ${response.statusText}`);
     }
     
-    return response.json();
+    return response.json() as Promise<Span[]>;
   }
 
   /**
@@ -72,7 +72,7 @@ export class CausableClient {
       throw new Error(`Failed to create span: ${response.statusText}`);
     }
     
-    return response.json();
+    return response.json() as Promise<Span>;
   }
 
   /**
