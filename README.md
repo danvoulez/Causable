@@ -16,6 +16,7 @@ This is a monorepo containing:
 
 - Node.js 18+ and pnpm 8+
 - Deno 1.x (for the backend)
+- PostgreSQL 12+ (for the ledger database)
 - VS Code 1.80+
 
 ### Installation
@@ -29,10 +30,25 @@ cd packages/sdk
 pnpm build
 ```
 
+### Database Setup
+
+The backend requires a PostgreSQL database with the Causable ledger schema. See `Reference-LogLine-OS.md` for the complete schema, or run the setup script:
+
+```sql
+-- Create the ledger schema and universal_registry table
+-- See Reference-LogLine-OS.md for full schema
+```
+
+Set the database connection string:
+
+```bash
+export DATABASE_URL="postgresql://user:password@localhost:5432/causable"
+```
+
 ### Running the Backend
 
 ```bash
-# Start the backend server
+# Start the backend server (requires DATABASE_URL environment variable)
 cd packages/causable-cloud
 deno run --allow-net --allow-env --allow-read api/index.ts
 
@@ -53,7 +69,23 @@ The API will be available at `http://localhost:8000`.
 
 ### Testing the SSE Stream
 
-You can test the stream by creating new spans:
+Use the verification script to test real-time updates:
+
+```bash
+cd packages/causable-cloud
+pnpm verify
+```
+
+In another terminal, manually insert a span into the database:
+
+```sql
+INSERT INTO ledger.universal_registry (id, seq, entity_type, who, "this", at)
+VALUES (gen_random_uuid(), 0, 'test', 'developer', 'verify_test', now());
+```
+
+The verification script should immediately log the new span!
+
+You can also create spans via the API:
 
 ```bash
 curl -X POST http://localhost:8000/api/spans \
