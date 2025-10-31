@@ -29,12 +29,27 @@ export async function createClient(): Promise<Client> {
  */
 export class DatabasePool {
   private client: Client | null = null;
+  private connecting: Promise<Client> | null = null;
 
   async getClient(): Promise<Client> {
-    if (!this.client) {
-      this.client = await createClient();
+    // Return existing client if available
+    if (this.client) {
+      return this.client;
     }
-    return this.client;
+    
+    // If already connecting, wait for that connection
+    if (this.connecting) {
+      return this.connecting;
+    }
+    
+    // Start new connection
+    this.connecting = createClient();
+    try {
+      this.client = await this.connecting;
+      return this.client;
+    } finally {
+      this.connecting = null;
+    }
   }
 
   async close(): Promise<void> {
@@ -42,6 +57,7 @@ export class DatabasePool {
       await this.client.end();
       this.client = null;
     }
+    this.connecting = null;
   }
 }
 

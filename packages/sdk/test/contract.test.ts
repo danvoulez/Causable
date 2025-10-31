@@ -156,7 +156,12 @@ function runTests(): void {
   console.log(`\n📊 Results: ${passed} passed, ${failed} failed\n`);
   
   if (failed > 0) {
-    process.exit(1);
+    // Support both Node.js and Deno
+    if (typeof Deno !== 'undefined') {
+      Deno.exit(1);
+    } else if (typeof process !== 'undefined') {
+      process.exit(1);
+    }
   }
 }
 

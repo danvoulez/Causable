@@ -21,6 +21,8 @@ export async function handleStream(_req: Request): Promise<Response> {
       
       // Create dedicated database connection for LISTEN
       let client;
+      let keepAliveInterval: number | undefined;
+      
       try {
         client = await createClient();
         
@@ -45,28 +47,16 @@ export async function handleStream(_req: Request): Promise<Response> {
         };
         
         // Keep-alive ping every 30 seconds
-        const keepAliveInterval = setInterval(() => {
+        keepAliveInterval = setInterval(() => {
           try {
             controller.enqueue(new TextEncoder().encode(": keep-alive\n\n"));
           } catch (error) {
             console.log("Keep-alive failed, cleaning up");
-            clearInterval(keepAliveInterval);
-          }
-        }, 30000);
-        
-        // Store cleanup function
-        return async () => {
-          console.log("📡 SSE connection closed");
-          clearInterval(keepAliveInterval);
-          if (client) {
-            try {
-              await client.queryObject("UNLISTEN timeline_updates");
-              await client.end();
-            } catch (error) {
-              console.error("Error during cleanup:", error);
+            if (keepAliveInterval !== undefined) {
+              clearInterval(keepAliveInterval);
             }
           }
-        };
+        }, 30000);
       } catch (error) {
         console.error("Error setting up SSE stream:", error);
         const errorMsg = `data: ${JSON.stringify({ type: "error", error: error.message })}\n\n`;
@@ -80,6 +70,9 @@ export async function handleStream(_req: Request): Promise<Response> {
           }
         }
       }
+    },
+    async cancel() {
+      console.log("📡 SSE connection closed by client");
     },
   });
   
