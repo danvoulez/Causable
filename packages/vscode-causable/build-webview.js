@@ -31,5 +31,9 @@ const buildWebview = async () => {
 
 buildWebview().catch((err) => {
   console.error('Build failed:', err);
+  console.error('Error details:', err.message);
+  if (err.stack) {
+    console.error('Stack trace:', err.stack);
+  }
   process.exit(1);
 });

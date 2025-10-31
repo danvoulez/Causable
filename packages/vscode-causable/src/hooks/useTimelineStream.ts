@@ -26,11 +26,11 @@ export function useTimelineStream(): UseTimelineStreamResult {
   const eventSourceRef = useRef<EventSource | null>(null);
   const reconnectTimeoutRef = useRef<number | null>(null);
   const reconnectAttemptsRef = useRef<number>(0);
+  const vscodeApiRef = useRef(acquireVsCodeApi());
 
   // Request API configuration from the extension host
   useEffect(() => {
-    // Send message to extension host to get API config
-    const vscode = acquireVsCodeApi();
+    const vscode = vscodeApiRef.current;
     
     // Set up message listener
     const handleMessage = (event: MessageEvent) => {
@@ -159,7 +159,8 @@ export function useTimelineStream(): UseTimelineStreamResult {
         reconnectTimeoutRef.current = null;
       }
     };
-  }, [apiConfig, connect]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [apiConfig]);
 
   const reconnect = useCallback(() => {
     console.log('Manual reconnection requested');
