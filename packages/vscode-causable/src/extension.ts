@@ -8,8 +8,19 @@ export function activate(context: vscode.ExtensionContext) {
   // Initialize API key service
   const apiKeyService = new ApiKeyService(context);
 
+  // Create status bar item
+  const statusBarItem = vscode.window.createStatusBarItem(
+    vscode.StatusBarAlignment.Right,
+    100
+  );
+  statusBarItem.text = '$(circle-outline) Causable';
+  statusBarItem.tooltip = 'Causable: Disconnected';
+  statusBarItem.command = 'workbench.view.extension.causable-sidebar';
+  statusBarItem.show();
+  context.subscriptions.push(statusBarItem);
+
   // Register sidebar provider
-  const sidebarProvider = new SidebarProvider(context.extensionUri, apiKeyService);
+  const sidebarProvider = new SidebarProvider(context.extensionUri, apiKeyService, statusBarItem);
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(
       'causable.timelineView',
@@ -53,20 +64,6 @@ export function activate(context: vscode.ExtensionContext) {
       }
     })
   );
-
-  // Create status bar item
-  const statusBarItem = vscode.window.createStatusBarItem(
-    vscode.StatusBarAlignment.Right,
-    100
-  );
-  statusBarItem.text = '$(circle-outline) Causable';
-  statusBarItem.tooltip = 'Causable: Disconnected';
-  statusBarItem.command = 'workbench.view.extension.causable-sidebar';
-  statusBarItem.show();
-  context.subscriptions.push(statusBarItem);
-
-  // Store status bar item for updates
-  context.workspaceState.update('statusBarItem', statusBarItem);
 }
 
 export function deactivate() {

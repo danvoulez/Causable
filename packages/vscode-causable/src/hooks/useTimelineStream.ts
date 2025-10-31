@@ -28,6 +28,15 @@ export function useTimelineStream(): UseTimelineStreamResult {
   const reconnectAttemptsRef = useRef<number>(0);
   const vscodeApiRef = useRef(acquireVsCodeApi());
 
+  // Update extension status bar when connection state changes
+  useEffect(() => {
+    const vscode = vscodeApiRef.current;
+    vscode.postMessage({
+      type: 'updateConnectionState',
+      state: connectionState,
+    });
+  }, [connectionState]);
+
   // Request API configuration from the extension host
   useEffect(() => {
     const vscode = vscodeApiRef.current;
